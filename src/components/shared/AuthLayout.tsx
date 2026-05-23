@@ -25,7 +25,7 @@ export function AuthLayout({
       {/* Left side: Premium architectural image */}
       <div className="relative hidden lg:block lg:col-span-6 xl:col-span-6 h-screen overflow-hidden">
         <Image
-          src="/images/4efcd7bd115e2660e3fb55c0de4b09caad515993.jpg"
+          src="/images/auth-banner.jpg"
           alt="Modern architectural home"
           fill
           priority

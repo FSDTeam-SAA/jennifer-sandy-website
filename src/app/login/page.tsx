@@ -144,7 +144,11 @@ export default function LoginPage() {
         {/* Remember me & Forgot Password */}
         <div className="flex items-center justify-between pt-1">
           <div className="flex items-center space-x-2">
-            <Checkbox id="rememberMe" {...register("rememberMe")} />
+            <Checkbox
+              id="rememberMe"
+              className="data-checked:border-[#006fe6] data-checked:bg-[#006fe6] data-checked:text-white aria-checked:border-[#006fe6] aria-checked:bg-[#006fe6] aria-checked:text-white"
+              {...register("rememberMe")}
+            />
             <label
               htmlFor="rememberMe"
               className="text-sm font-normal text-slate-500 hover:text-slate-700 cursor-pointer select-none transition-colors"

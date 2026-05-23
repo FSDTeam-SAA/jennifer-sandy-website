@@ -61,6 +61,7 @@ const config = {
       fontFamily: {
         serif: ["var(--font-serif)", "serif"],
         poppins: ["var(--font-poppins)", "sans-serif"],
+        manrope: ["var(--font-sans)", "sans-serif"],
       },
     },
   },
