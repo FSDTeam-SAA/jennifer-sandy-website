@@ -1,12 +1,3 @@
 export function ContactCtaSection() {
-  return (
-    <section className="container mx-auto px-6 pb-6 lg:px-10">
-      <div className="relative overflow-hidden rounded-[14px] bg-[#EAF3FF] px-6 py-10 text-center">
-        <div className="pointer-events-none absolute right-16 top-[-44px] h-[180px] w-[180px] rounded-full border-4 border-[#bfdbfe]" />
-        <h3 className="section-title relative z-10 text-[#1672E6]">Interested? Contact us directly.</h3>
-        <p className="section-desc relative z-10 mt-1 text-slate-500">Our team is here to provide personalized guidance and support reach out anytime.</p>
-        <button className="relative z-10 mt-5 rounded-md bg-[#1672E6] px-7 py-2 text-sm font-semibold text-white">Contact Us</button>
-      </div>
-    </section>
-  );
+  return <section id="kontakt" className="container scroll-mt-28 px-4 py-12 sm:px-6 lg:px-10"><div className="rounded-xl bg-[#f3f1ed] px-6 py-10 text-center"><h2 className="section-title">Wir sind für Sie da.</h2><p className="mt-3 text-stone-500">Sie haben Fragen zu einer Immobilie oder möchten Ihr Apartment anbieten?</p><a className="brand-button mt-6" href="mailto:info@0211wohnen.de">info@0211wohnen.de</a></div></section>;
 }

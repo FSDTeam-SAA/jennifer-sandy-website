@@ -1,79 +1,306 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useState } from "react";
-import { ArrowRight, ChevronLeft, ChevronRight, CircleCheck, Expand, Heart, MapPin, MinusCircle, PlusCircle, Share2, Shield, ShieldCheck } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { ArrowRight, MinusCircle, PlusCircle } from "lucide-react";
+import { PropertyBrowser } from "./property-browser";
+import { PropertySliderSection } from "./property-slider-section";
+import { blogPosts } from "@/components/blog/blog-data";
+import { apiBaseUrl } from "@/lib/estates";
 
 const popularAreas = [
-  { title: "Studio Apartments", count: "08 Apartments", image: "/images/properties-1.jpg" },
-  { title: "Old Town Lifestyle", count: "15 Apartments", image: "/images/properties-2.jpg" },
-  { title: "1-2 Bedroom Apartments", count: "12 Apartments", image: "/images/properties-3.jpg" },
-  { title: "Luxury Apartments", count: "05 Apartments", image: "/images/properties-4.jpg" },
+  {
+    title: "Medienhafen",
+    count: "34 Apartments",
+    desc: "Architektur & Lifestyle direkt am Rhein",
+    image: "/images/properties-1.jpg",
+  },
+  {
+    title: "Carlstadt",
+    count: "1 Apartment",
+    desc: "Historischer Charme & Kunstgalerien",
+    image: "/images/properties-2.jpg",
+  },
+  {
+    title: "Unterbilk",
+    count: "18 Apartments",
+    desc: "Urbanes Flair & Lorettoviertel",
+    image: "/images/properties-3.jpg",
+  },
+  {
+    title: "Pempelfort",
+    count: "13 Apartments",
+    desc: "Hofgarten-Nähe & beste Gastronomie",
+    image: "/images/properties-4.jpg",
+  },
 ];
 
-const propertyImages = ["/images/properties-2.jpg", "/images/properties-3.jpg", "/images/properties-4.jpg"];
+const homeFaqs = [
+  {
+    q: "How does the booking process work?",
+    a: "Our booking process is simple and digital. After you submit your request, we review it promptly and coordinate the lease agreement. You receive all move-in details and digital access instructions without unnecessary bureaucracy.",
+  },
+  {
+    q: "What is included in the additional costs (Pauschalmiete)?",
+    a: "Our all-inclusive Pauschalmiete covers heating, electricity, water, high-speed Wi-Fi, and building service charges in one fixed monthly rate. No hidden fees or surprising year-end utility recalculations.",
+  },
+  {
+    q: "Can I view the apartment beforehand?",
+    a: "Yes! We offer both personal on-site viewings and guided digital video tours so you can comfortably inspect your future home from anywhere in the world.",
+  },
+  {
+    q: "How long is the minimum rental period?",
+    a: "Most of our furnished designer apartments can be rented from 1 month up to several years, giving you complete flexibility for temporary assignments or relocations.",
+  },
+  {
+    q: "Do I receive a Wohnungsgeberbestätigung for registration?",
+    a: "Yes, immediately upon move-in we issue the official German landlord confirmation (Wohnungsgeberbestätigung) required for your city registration at the Bürgerbüro.",
+  },
+];
 
-export function HomeContentSections() {
-  const [activePropertyImage, setActivePropertyImage] = useState(0);
+export function HomeContentSections({
+  filters,
+  onSelectDistrict,
+}: {
+  filters?: { availableFrom?: string; district?: string; minRooms?: string };
+  onSelectDistrict?: (district: string) => void;
+}) {
+  const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const [districtCounts, setDistrictCounts] = useState<Record<string, number>>({});
+  const featuredBlog = blogPosts[0];
 
   useEffect(() => {
-    const interval = setInterval(() => setActivePropertyImage((p) => (p + 1) % propertyImages.length), 5000);
-    return () => clearInterval(interval);
+    fetch(`${apiBaseUrl()}/onoffice/popular-areas`)
+      .then((res) => res.json())
+      .then((json) => {
+        if (Array.isArray(json?.data)) {
+          const map: Record<string, number> = {};
+          json.data.forEach((item: { district: string; count: number }) => {
+            if (item.district) {
+              map[item.district.toLowerCase()] = item.count;
+            }
+          });
+          setDistrictCounts(map);
+        }
+      })
+      .catch(() => {});
   }, []);
 
-  return (
-    <>
-      <section className="container mx-auto px-6 lg:px-10">
-        <div className="mb-6 flex items-center gap-3"><h2 className="section-title text-[#1672E6]">Map View</h2><Shield className="h-9 w-9 text-[#1672E6]" strokeWidth={2.2} /></div>
-        <div className="relative h-[300px] overflow-hidden rounded-md bg-[#D8D8D8]">
-          <div className="absolute left-0 top-0 h-full w-[23%] bg-[#6ea8e8]" /><div className="absolute right-0 top-0 h-full w-[25%] bg-[#8ecfae]" />
-          <div className="absolute left-[21%] top-[20%] h-[65%] w-[60%] rounded-[120px] border-[24px] border-[#f0de23]" />
-          <div className="absolute inset-0 opacity-65"><div className="absolute left-[2%] top-[35%] h-[10px] w-[96%] rotate-[8deg] bg-white/80" /><div className="absolute left-[4%] top-[58%] h-[9px] w-[90%] -rotate-[12deg] bg-white/80" /><div className="absolute left-[30%] top-[10%] h-[8px] w-[60%] rotate-[20deg] bg-white/80" /></div>
-          <MapPin className="absolute left-[33%] top-[42%] h-12 w-12 fill-red-600 text-red-600" /><MapPin className="absolute left-[73%] top-[25%] h-12 w-12 fill-red-600 text-red-600" />
-        </div>
-      </section>
+  const getAreaCount = (title: string, fallback: string) => {
+    const key = title.toLowerCase();
+    const count = districtCounts[key];
+    if (typeof count === "number") {
+      return `${count} ${count === 1 ? "Apartment" : "Apartments"}`;
+    }
+    return fallback;
+  };
 
-      <section className="container mx-auto px-6 lg:px-10">
+  const handleAreaClick = (districtName: string) => {
+    if (onSelectDistrict) {
+      onSelectDistrict(districtName);
+    } else {
+      const el = document.getElementById("wohnungen");
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth" });
+      }
+    }
+  };
+
+  return (
+    <div className="space-y-24">
+      {/* 1. Main Interactive Property Listing & Map Split View */}
+      <PropertyBrowser externalFilters={filters} />
+
+      {/* 2. Popular Areas */}
+      <section className="container mx-auto px-4 sm:px-6 lg:px-10">
         <h2 className="section-title text-[#1672E6]">Popular Areas</h2>
-        <p className="section-desc mt-2 text-slate-500">Move In Ready: Professional Furnished Apartments, Zero Agent Fees</p>
-        <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <p className="section-desc mt-2 text-slate-500">
+          Move In Ready: Professional Furnished Apartments, Zero Agent Fees
+        </p>
+        <div className="mt-8 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
           {popularAreas.map((area) => (
-            <article key={area.title} className="overflow-hidden rounded-lg bg-[#EEF0F3]"><div className="relative h-[320px] w-full"><Image src={area.image} alt={area.title} fill className="object-cover" /></div><div className="flex items-center justify-between px-4 pb-2 pt-4"><h3 className="text-xl text-[#1672E6]">{area.title}</h3><ArrowRight className="h-5 w-5 text-[#1672E6]" /></div><p className="px-4 pb-4 text-sm text-[#6EA8E8]">{area.count}</p></article>
+            <article
+              key={area.title}
+              onClick={() => handleAreaClick(area.title)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  handleAreaClick(area.title);
+                }
+              }}
+              className="group cursor-pointer overflow-hidden rounded-2xl bg-[#EEF0F3] shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#1672E6]"
+            >
+              <div className="relative h-[280px] w-full overflow-hidden">
+                <Image
+                  src={area.image}
+                  alt={area.title}
+                  fill
+                  className="object-cover transition duration-300 group-hover:scale-105"
+                />
+              </div>
+              <div className="p-5">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-bold text-[#1672E6] group-hover:underline">
+                    {area.title}
+                  </h3>
+                  <div
+                    aria-label={`View apartments in ${area.title}`}
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#1672E6] shadow-sm transition duration-200 group-hover:bg-[#1672E6] group-hover:text-white"
+                  >
+                    <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
+                  </div>
+                </div>
+                <p className="mt-1 text-xs text-slate-500">{area.desc}</p>
+                <p className="mt-3 text-sm font-semibold text-[#1672E6]">
+                  {getAreaCount(area.title, area.count)}
+                </p>
+              </div>
+            </article>
           ))}
         </div>
       </section>
 
-      <section className="container mx-auto px-6 pb-20 lg:px-10">
-        <h2 className="section-title text-center text-[#1672E6]">Our Properties View</h2>
-        <p className="section-desc mt-2 text-center text-slate-500">Your Guide to Hassle-Free Renting and Stylish, Fully-Furnished Homes</p>
-        <div className="relative mt-8 overflow-hidden rounded-[10px]">
-          <Image src={propertyImages[activePropertyImage]} alt="Active property view" width={1500} height={850} className="h-[620px] w-full object-cover transition-opacity duration-500" />
-          <div className="absolute right-8 top-8 flex items-center gap-3"><button className="rounded-xl bg-white/90 p-3 text-slate-700 shadow-sm"><Expand className="h-6 w-6" /></button><button className="rounded-xl bg-white/90 p-3 text-slate-700 shadow-sm"><Share2 className="h-6 w-6" /></button><button className="rounded-xl bg-white/90 p-3 text-slate-700 shadow-sm"><Heart className="h-6 w-6" /></button></div>
-          <button className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/70 p-3 text-slate-700"><ChevronLeft className="h-7 w-7" /></button>
-          <button className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/70 p-3 text-slate-700"><ChevronRight className="h-7 w-7" /></button>
-          <div className="absolute bottom-[165px] right-16 w-[320px] rounded-xl bg-white p-4 text-center shadow-xl"><h3 className="text-3xl font-semibold text-[#1672E6]">1.800 EUR</h3><p className="text-lg text-slate-600">per month</p><div className="mt-2 flex items-center justify-center gap-2 text-sm text-slate-500"><CircleCheck className="h-5 w-5 text-[#22C55E]" /> Available from 01.05.2026</div><button className="mt-3 w-full rounded-md bg-[#1672E6] py-2.5 text-sm font-medium text-white">Enquire Now</button><div className="mt-3 flex items-center justify-center gap-2 text-sm text-slate-400"><ShieldCheck className="h-4 w-4" />Verified provider</div></div>
-          <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-4">{propertyImages.map((thumb, index) => (<button key={thumb} type="button" onClick={() => setActivePropertyImage(index)} className={`relative h-[98px] w-[170px] overflow-hidden rounded-lg border transition ${activePropertyImage === index ? "border-white" : "border-white/70"}`}><Image src={thumb} alt="Property thumbnail" fill className="object-cover" /></button>))}</div>
+      {/* 3. Fully Working "Our Properties View" Slider */}
+      <PropertySliderSection />
+
+      {/* 4. From Our Blog / Magazine */}
+      <section className="container mx-auto px-4 sm:px-6 lg:px-10">
+        <h2 className="section-title text-[#1672E6]">From Our Blog</h2>
+        <p className="section-desc mt-2 text-slate-500">
+          Your Guide to Hassle-Free Renting and Stylish, Fully-Furnished Homes
+        </p>
+
+        <article className="mt-8 grid overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm lg:grid-cols-2">
+          <div className="relative h-[300px] w-full sm:h-[380px] lg:h-full">
+            <Image
+              src={featuredBlog.image}
+              alt={featuredBlog.title}
+              fill
+              className="object-cover"
+            />
+          </div>
+          <div className="flex flex-col justify-between p-6 sm:p-8 lg:p-10">
+            <div>
+              <span className="inline-block rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-[#1672E6]">
+                {featuredBlog.tag}
+              </span>
+              <h3 className="mt-3 font-serif text-2xl font-bold leading-snug text-slate-800 sm:text-3xl">
+                {featuredBlog.title}
+              </h3>
+              <p className="mt-4 text-sm leading-relaxed text-slate-500 sm:text-base">
+                {featuredBlog.excerpt}
+              </p>
+            </div>
+            <Link
+              href={`/blogs/${featuredBlog.slug}`}
+              className="mt-6 inline-flex items-center gap-2 text-base font-bold text-[#1672E6] hover:underline"
+            >
+              Read more <ArrowRight className="h-5 w-5" />
+            </Link>
+          </div>
+        </article>
+      </section>
+
+      {/* 5. Explore Homes Banner */}
+      <section className="container mx-auto px-4 pb-12 sm:px-6 lg:px-10">
+        <div className="relative overflow-hidden rounded-[24px] shadow-xl">
+          <Image
+            src="/images/banner.jpg"
+            alt="Explore homes in Duesseldorf"
+            width={1600}
+            height={650}
+            className="h-[380px] w-full object-cover sm:h-[420px]"
+          />
+          <div className="absolute inset-0 bg-black/45" />
+          <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center text-white">
+            <h3 className="font-serif text-3xl font-bold leading-tight sm:text-4xl lg:text-5xl">
+              Find <span className="text-[#6EA8E8]">Your Perfect</span> Home
+            </h3>
+            <p className="mt-4 max-w-2xl text-sm leading-relaxed text-white/90 sm:text-base">
+              Easily search, compare, and connect with professionally managed apartments.
+              Whether you are looking for a cozy studio or a spacious luxury loft, we provide
+              safe, comfortable, and move-in ready homes with zero broker commissions.
+            </p>
+            <Link
+              href="/apartments"
+              className="mt-6 rounded-xl bg-[#1672E6] px-8 py-3.5 text-base font-semibold text-white shadow-lg transition hover:bg-[#125ec4]"
+            >
+              Explore Homes
+            </Link>
+          </div>
         </div>
       </section>
 
-      <section className="container mx-auto px-6 lg:px-10">
-        <h2 className="section-title text-[#1672E6]">From Our Blog</h2>
-        <p className="section-desc mt-2 text-slate-500">Your Guide to Hassle-Free Renting and Stylish, Fully-Furnished Homes</p>
-        <article className="mt-8 grid overflow-hidden rounded-lg border border-slate-200 bg-white lg:grid-cols-2"><div className="relative h-[330px] w-full lg:h-[420px]"><Image src="/images/blog.jpg" alt="Blog cover" fill className="object-cover" /></div><div className="p-6 lg:p-8"><h3 className="text-2xl font-medium leading-[140%] text-slate-700">Living in the Media Harbour: The ultimate guide for expats</h3><p className="section-desc mt-4 align-middle tracking-normal text-slate-500">Discover the best places to live, top-rated restaurants, trendy bars, and exciting leisure activities in Dusseldorf&apos;s most modern district. From vibrant nightlife to cultural hotspots, art galleries, and scenic waterfront views, we&apos;ll guide you through everything that makes the Media Harbor perfect for expats seeking a dynamic and cosmopolitan lifestyle. Learn insider tips on local living, hidden gems, and community events that will help you feel at home in this bustling urban hub.</p><button className="mt-7 inline-flex items-center gap-2 text-lg font-semibold text-[#1672E6]">Read more <ArrowRight className="h-6 w-6" /></button></div></article>
+      {/* 6. Frequently Asked Questions */}
+      <section className="container mx-auto px-4 sm:px-6 lg:px-10">
+        <div className="text-center">
+          <h2 className="section-title text-[#1672E6]">Frequently Asked Questions</h2>
+          <p className="section-desc mt-2 text-slate-500">
+            Find quick answers to the most common questions about our facilities and services.
+          </p>
+        </div>
+
+        <div className="mt-10 divide-y divide-slate-200 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-8">
+          {homeFaqs.map((faq, index) => {
+            const isOpen = openFaq === index;
+            return (
+              <div key={faq.q} className="py-5 first:pt-2 last:pb-2">
+                <button
+                  type="button"
+                  onClick={() => setOpenFaq(isOpen ? null : index)}
+                  className="flex w-full items-center justify-between gap-4 text-left"
+                >
+                  <h3 className="text-base font-semibold text-slate-800 sm:text-lg">
+                    {faq.q}
+                  </h3>
+                  {isOpen ? (
+                    <MinusCircle className="h-5 w-5 shrink-0 text-[#1672E6]" />
+                  ) : (
+                    <PlusCircle className="h-5 w-5 shrink-0 text-[#1672E6]" />
+                  )}
+                </button>
+                {isOpen && (
+                  <p className="mt-3 pr-6 text-sm leading-relaxed text-slate-500 sm:text-base">
+                    {faq.a}
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </section>
 
-      <section className="container mx-auto px-6 pb-24 lg:px-10">
-        <div className="relative overflow-hidden rounded-[20px]"><Image src="/images/banner.jpg" alt="Explore homes banner" width={1600} height={650} className="h-[420px] w-full object-cover" /><div className="absolute inset-0 bg-black/35" /><div className="absolute inset-0 flex flex-col items-center justify-center px-10 text-center text-white"><h3 className="section-title text-white">Find <span className="text-[#1672E6]">Your Perfect</span> Home</h3><p className="banner-desc mt-4 text-white/90">Easily search, compare, and connect with professionally managed apartments and homes. Whether you&apos;re looking for a cozy studio, a family-friendly space, or a stylish city pad, we help you find a safe, comfortable, and move-in ready home without agents or hidden fees.</p><button className="mt-8 rounded-lg bg-[#1672E6] px-8 py-3 text-base font-semibold text-white">Explore Homes</button></div></div>
-      </section>
+      {/* 7. Contact Us CTA */}
+      <section id="kontakt" className="container scroll-mt-28 mx-auto px-4 pb-20 sm:px-6 lg:px-10">
+        <div className="relative overflow-hidden rounded-[24px] bg-[#EEF1F5] px-6 py-12 text-center sm:py-16 shadow-sm">
+          <div className="pointer-events-none absolute -right-8 -top-20 h-[320px] w-[520px] rounded-[50%] border-[6px] border-[#bfdbfe]/50" />
+          <div className="pointer-events-none absolute right-40 top-0 h-[280px] w-[420px] rounded-[50%] border-[5px] border-[#bfdbfe]/40" />
 
-      <section className="container mx-auto px-6 lg:px-10">
-        <div className="text-center"><h2 className="section-title text-[#1672E6]">Frequently Asked Questions</h2><p className="section-desc mt-2 text-slate-500">Find quick answers to the most common questions about our facilities and services.</p></div>
-        <div className="mt-10 divide-y divide-slate-200 border-y border-slate-200"><div className="py-5"><div className="flex items-center justify-between gap-4"><h3 className="text-xl text-slate-700">How does the booking process work?</h3><MinusCircle className="h-5 w-5 text-[#1672E6]" /></div><p className="mt-2 pr-10 text-base leading-[170%] text-slate-500">Our booking process is simple and digital. After you submit your request, we will review it and send you a digital rental agreement for signature. Attached you will receive all the necessary information for your move-in. We are here to support you every step of the way.</p></div>{["What is included in the additional costs?","Can I view the apartment?","How long is the lease?","How does billing work?","How do I change my account email?"].map((item) => (<div key={item} className="flex items-center justify-between py-5"><h3 className="text-xl text-slate-700">{item}</h3><PlusCircle className="h-5 w-5 text-[#1672E6]" /></div>))}</div>
+          <h3 className="relative z-10 text-3xl font-bold text-[#1672E6] sm:text-4xl">
+            Interested? Contact us directly.
+          </h3>
+          <p className="relative z-10 mt-3 text-sm text-slate-600 sm:text-base">
+            Our team is here to provide personalized guidance and support. Reach out anytime.
+          </p>
+          <div className="relative z-10 mt-8 flex flex-wrap items-center justify-center gap-4">
+            <a
+              href="mailto:info@0211wohnen.de"
+              className="rounded-xl bg-[#1672E6] px-10 py-3.5 text-base font-semibold text-white shadow-md transition hover:bg-[#125ec4]"
+            >
+              Contact Us: info@0211wohnen.de
+            </a>
+            <Link
+              href="/apartments"
+              className="rounded-xl border border-slate-300 bg-white px-8 py-3.5 text-base font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+            >
+              Browse Apartments
+            </Link>
+          </div>
+        </div>
       </section>
-
-      <section className="container mx-auto px-6 pb-24 lg:px-10">
-        <div className="relative overflow-hidden rounded-[18px] bg-[#EEF1F5] px-6 py-10 text-center"><div className="pointer-events-none absolute -right-8 -top-20 h-[320px] w-[520px] rounded-[50%] border-[6px] border-[#bfdbfe]" /><div className="pointer-events-none absolute right-40 top-0 h-[280px] w-[420px] rounded-[50%] border-[5px] border-[#bfdbfe]" /><h3 className="section-title relative z-10 text-[#1672E6]">Interested? Contact us directly.</h3><p className="section-desc relative z-10 mt-2 text-slate-500">Our team is here to provide personalized guidance and support reach out anytime.</p><button className="relative z-10 mt-8 rounded-lg bg-[#1672E6] px-12 py-3 text-base font-semibold text-white">Contact Us</button></div>
-      </section>
-    </>
+    </div>
   );
 }

@@ -24,8 +24,15 @@ const changePasswordSchema = z.object({
 
 type ChangePasswordFormValues = z.infer<typeof changePasswordSchema>;
 
-export default function ChangePasswordPage() {
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
+
+function ChangePasswordContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const email = searchParams.get("email") || "";
+  const token = searchParams.get("token") || "";
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -42,16 +49,36 @@ export default function ChangePasswordPage() {
     },
   });
 
-  const onSubmit = async () => {
+  const onSubmit = async (data: ChangePasswordFormValues) => {
+    if (!email || !token) {
+      toast.error("Invalid or expired reset link. Please request a new password reset.");
+      router.push("/forgot-password");
+      return;
+    }
+
     setIsLoading(true);
     try {
-      // Simulate API request
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      
-      toast.success("Password reset successfully! You can now log in with your new password.");
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
+      const res = await fetch(`${apiUrl}/auth/reset-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          newPassword: data.password,
+          resetToken: token,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json?.message || "Failed to reset password");
+      }
+
+      toast.success("Password reset successfully! You can now log in.");
       router.push("/login");
-    } catch {
-      toast.error("Failed to reset password. Please try again.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to reset password. Please try again.";
+      toast.error(msg);
     } finally {
       setIsLoading(false);
     }
@@ -155,5 +182,19 @@ export default function ChangePasswordPage() {
         </Button>
       </form>
     </AuthLayout>
+  );
+}
+
+export default function ChangePasswordPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-screen w-screen items-center justify-center bg-[#F8FAFC]">
+          <Loader2 className="w-8 h-8 animate-spin text-[#006fe6]" />
+        </div>
+      }
+    >
+      <ChangePasswordContent />
+    </Suspense>
   );
 }

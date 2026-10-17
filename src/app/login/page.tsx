@@ -45,24 +45,22 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
     try {
-      // First attempt local next-auth sign in
       const result = await signIn("credentials", {
         redirect: false,
-        email: data.email,
+        email: data.email.trim().toLowerCase(),
         password: data.password,
       });
 
-      if (result?.error) {
-        // If demo credentials, allow bypass for presentation
-        if (data.email === "admin@example.com" && data.password === "password") {
-          toast.success("Login successful (Demo Mode)!");
-          router.push("/dashboard");
-        } else {
-          toast.error("Invalid credentials. Try admin@example.com / password");
-        }
+      if (!result || result.error) {
+        const errorMsg =
+          result?.error === "CredentialsSignin"
+            ? "Invalid email or password. Please verify your credentials."
+            : result?.error || "Login failed. Please check your credentials.";
+        toast.error(errorMsg);
       } else {
         toast.success("Welcome back! Logged in successfully.");
-        router.push("/dashboard");
+        router.push("/profile");
+        router.refresh();
       }
     } catch {
       toast.error("An unexpected error occurred. Please try again.");

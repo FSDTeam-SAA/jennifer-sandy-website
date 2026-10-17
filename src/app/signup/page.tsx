@@ -57,13 +57,42 @@ export default function SignupPage() {
   const onSubmit = async (data: SignupFormValues) => {
     setIsLoading(true);
     try {
-      // Simulate API request
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      
-      toast.success("Account created successfully! Let's verify your email.");
-      router.push(`/verify-otp?email=${encodeURIComponent(data.email)}`);
-    } catch {
-      toast.error("Registration failed. Please try again.");
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
+      const res = await fetch(`${apiUrl}/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstName: data.firstName.trim(),
+          lastName: data.lastName.trim(),
+          email: data.email.trim().toLowerCase(),
+          password: data.password,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) {
+        const errorMsg = json?.message || "Registration failed";
+        if (/already exists/i.test(errorMsg)) {
+          toast.error("An account with this email already exists. Redirecting to login...", {
+            duration: 4000,
+          });
+          setTimeout(() => {
+            router.push(`/login?email=${encodeURIComponent(data.email.trim().toLowerCase())}`);
+          }, 1500);
+          return;
+        }
+        throw new Error(errorMsg);
+      }
+
+      if (/pending verification/i.test(json?.message || "")) {
+        toast.info("Account pending verification. A fresh code has been sent to your email!");
+      } else {
+        toast.success("Account created successfully! Check your email for verification code.");
+      }
+      router.push(`/verify-otp?email=${encodeURIComponent(data.email.trim().toLowerCase())}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Registration failed. Please try again.";
+      toast.error(msg);
     } finally {
       setIsLoading(false);
     }

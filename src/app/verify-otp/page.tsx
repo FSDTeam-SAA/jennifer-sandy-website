@@ -11,14 +11,14 @@ import { Button } from "@/components/ui/button";
 function VerifyOtpContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const email = searchParams.get("email") || "your email address";
+  const email = searchParams.get("email") || "";
 
-  const [otp, setOtp] = useState<string[]>(["", "", "", "", ""]);
+  const [otp, setOtp] = useState<string[]>(["", "", "", "", "", ""]);
   const [isLoading, setIsLoading] = useState(false);
   const [resendTimer, setResendTimer] = useState(59);
 
-  // References to the 5 input boxes
   const inputRefs = [
+    useRef<HTMLInputElement>(null),
     useRef<HTMLInputElement>(null),
     useRef<HTMLInputElement>(null),
     useRef<HTMLInputElement>(null),
@@ -26,7 +26,6 @@ function VerifyOtpContent() {
     useRef<HTMLInputElement>(null),
   ];
 
-  // Resend OTP cooldown timer
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (resendTimer > 0) {
@@ -38,24 +37,20 @@ function VerifyOtpContent() {
   }, [resendTimer]);
 
   const handleChange = (index: number, value: string) => {
-    // Only accept numeric inputs
     if (value !== "" && !/^[0-9]$/.test(value)) return;
 
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
 
-    // If typing a digit, shift focus to the next field
-    if (value !== "" && index < 4) {
+    if (value !== "" && index < 5) {
       inputRefs[index + 1].current?.focus();
     }
   };
 
   const handleKeyDown = (index: number, e: KeyboardEvent<HTMLInputElement>) => {
-    // Handle backspace key
     if (e.key === "Backspace") {
       if (otp[index] === "" && index > 0) {
-        // Shift focus to the previous input and clear it
         const newOtp = [...otp];
         newOtp[index - 1] = "";
         setOtp(newOtp);
@@ -71,41 +66,83 @@ function VerifyOtpContent() {
   const handlePaste = (e: ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
     const pastedData = e.clipboardData.getData("text").trim();
-    if (!/^\d{5}$/.test(pastedData)) {
-      toast.error("Please paste a valid 5-digit verification code");
+    if (!/^\d{6}$/.test(pastedData)) {
+      toast.error("Please paste a valid 6-digit verification code");
       return;
     }
 
     const pastedDigits = pastedData.split("");
     setOtp(pastedDigits);
-    inputRefs[4].current?.focus();
+    inputRefs[5].current?.focus();
   };
 
-  const handleResend = () => {
-    if (resendTimer > 0) return;
-    
-    setResendTimer(59);
-    toast.success("A new verification code has been sent!");
+  const handleResend = async () => {
+    if (resendTimer > 0 || !email) return;
+
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
+      const res = await fetch(`${apiUrl}/auth/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => null);
+        throw new Error(json?.message || "Failed to resend code");
+      }
+      setResendTimer(59);
+      toast.success("A new verification code has been sent!");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to resend code";
+      toast.error(msg);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const code = otp.join("");
-    
-    if (code.length < 5) {
-      toast.error("Please enter the complete 5-digit verification code");
+
+    if (code.length < 6) {
+      toast.error("Please enter the complete 6-digit verification code");
+      return;
+    }
+
+    if (!email) {
+      toast.error("Missing email address. Please sign up or request a reset again.");
+      router.push("/signup");
       return;
     }
 
     setIsLoading(true);
     try {
-      // Simulate verification api
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      
-      toast.success("Email verified successfully! You can now reset/change your password.");
-      router.push(`/change-password?email=${encodeURIComponent(email)}`);
-    } catch {
-      toast.error("Invalid verification code. Please try again.");
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
+      const res = await fetch(`${apiUrl}/auth/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          otp: code,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json?.message || "Invalid verification code");
+      }
+
+      const resetToken = json?.data?.resetToken;
+      if (resetToken) {
+        toast.success("Code verified! Set your new password.");
+        router.push(
+          `/change-password?email=${encodeURIComponent(email)}&token=${encodeURIComponent(resetToken)}`
+        );
+      } else {
+        toast.success("Email verified successfully! You can now log in.");
+        router.push("/login");
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Invalid verification code. Please try again.";
+      toast.error(msg);
     } finally {
       setIsLoading(false);
     }
@@ -114,7 +151,7 @@ function VerifyOtpContent() {
   return (
     <AuthLayout
       title="Verify Email"
-      description={`A 5-digit verification code has been sent to ${email}`}
+      description={`Enter the 6-digit verification code sent to ${email || "your email"}`}
       footer={
         <div className="text-slate-600 font-normal">
           {"Didn't get the code? "}
@@ -135,7 +172,7 @@ function VerifyOtpContent() {
     >
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* OTP Input Group */}
-        <div className="flex justify-between items-center gap-2.5 max-w-[340px] mx-auto py-2">
+        <div className="flex justify-between items-center gap-2 max-w-[360px] mx-auto py-2">
           {otp.map((digit, index) => (
             <input
               key={index}
@@ -147,7 +184,7 @@ function VerifyOtpContent() {
               onChange={(e) => handleChange(index, e.target.value)}
               onKeyDown={(e) => handleKeyDown(index, e)}
               onPaste={index === 0 ? handlePaste : undefined}
-              className="w-12 h-12 sm:w-14 sm:h-14 text-center text-xl font-semibold text-slate-800 bg-slate-50/50 hover:bg-slate-50 border border-slate-200 focus:border-[#006fe6] focus:bg-white rounded-lg focus-visible:ring-3 focus-visible:ring-[#006fe6]/20 outline-none transition-all"
+              className="w-10 h-12 sm:w-12 sm:h-14 text-center text-xl font-semibold text-slate-800 bg-slate-50/50 hover:bg-slate-50 border border-slate-200 focus:border-[#006fe6] focus:bg-white rounded-lg focus-visible:ring-3 focus-visible:ring-[#006fe6]/20 outline-none transition-all"
             />
           ))}
         </div>

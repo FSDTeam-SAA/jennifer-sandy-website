@@ -1,28 +1,32 @@
 "use client"
 
-import { Checkbox as CheckboxPrimitive } from "@base-ui/react/checkbox"
-
+import * as React from "react"
 import { cn } from "@/lib/utils"
-import { CheckIcon } from "lucide-react"
 
-function Checkbox({ className, ...props }: CheckboxPrimitive.Root.Props) {
-  return (
-    <CheckboxPrimitive.Root
-      data-slot="checkbox"
-      className={cn(
-        "peer relative flex size-4 shrink-0 items-center justify-center rounded-[4px] border border-input transition-colors outline-none group-has-disabled/field:opacity-50 after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 aria-invalid:aria-checked:border-primary dark:bg-input/30 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 data-checked:border-[#0678EF] data-checked:bg-[#0678EF] data-checked:text-white dark:data-checked:bg-primary",
-        className
-      )}
-      {...props}
-    >
-      <CheckboxPrimitive.Indicator
-        data-slot="checkbox-indicator"
-        className="grid place-content-center text-current transition-none [&>svg]:size-3.5"
-      >
-        <CheckIcon />
-      </CheckboxPrimitive.Indicator>
-    </CheckboxPrimitive.Root>
-  )
+export interface CheckboxProps
+  extends React.InputHTMLAttributes<HTMLInputElement> {
+  onCheckedChange?: (checked: boolean) => void;
 }
 
-export { Checkbox }
+const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
+  ({ className, onCheckedChange, onChange, ...props }, ref) => {
+    return (
+      <input
+        type="checkbox"
+        ref={ref}
+        onChange={(e) => {
+          onChange?.(e);
+          onCheckedChange?.(e.target.checked);
+        }}
+        className={cn(
+          "h-4 w-4 rounded border-slate-300 text-[#1672E6] focus:ring-[#1672E6] accent-[#1672E6] cursor-pointer",
+          className
+        )}
+        {...props}
+      />
+    );
+  }
+);
+Checkbox.displayName = "Checkbox";
+
+export { Checkbox };

@@ -23,9 +23,15 @@ const poppins = Poppins({
   weight: ["400", "500", "600", "700"],
 });
 
+import TranslateProvider from "@/components/providers/TranslateProvider";
+
 export const metadata: Metadata = {
-  title: "Next.js Boilerplate",
-  description: "A Next.js boilerplate project",
+  title: {
+    default: "0211wohnen · Möblierte Apartments in Düsseldorf",
+    template: "%s | 0211wohnen",
+  },
+  description:
+    "Möblierte Apartments und Wohnen auf Zeit in Düsseldorf und Umgebung. Erstklassiger Standard, transparente Pauschalmiete.",
 };
 
 export default function RootLayout({
@@ -34,7 +40,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="de">
       <body
         className={cn(
           "min-h-screen bg-background font-sans antialiased",
@@ -45,6 +51,7 @@ export default function RootLayout({
       >
         <AuthProvider>
           <AppProvider>
+            <TranslateProvider />
             {children}
             <Toaster />
           </AppProvider>

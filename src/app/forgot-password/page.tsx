@@ -38,13 +38,23 @@ export default function ForgotPasswordPage() {
   const onSubmit = async (data: ForgotPasswordFormValues) => {
     setIsLoading(true);
     try {
-      // Simulate API request
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
+      const res = await fetch(`${apiUrl}/auth/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: data.email.trim().toLowerCase() }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json?.message || "Failed to send reset code");
+      }
+
       toast.success("Verification code sent to your email!");
-      router.push(`/verify-otp?email=${encodeURIComponent(data.email)}`);
-    } catch {
-      toast.error("Failed to send verification code. Please try again.");
+      router.push(`/verify-otp?email=${encodeURIComponent(data.email.trim().toLowerCase())}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to send verification code. Please try again.";
+      toast.error(msg);
     } finally {
       setIsLoading(false);
     }
